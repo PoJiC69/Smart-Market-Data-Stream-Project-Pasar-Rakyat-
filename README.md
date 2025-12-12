@@ -86,7 +86,11 @@ source .venv/bin/activate        # Linux/macOS
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
-
+```bash
+Usage examples:
+  python main.py --register --server http://localhost:8000
+  python main.py --mode http --mock true --interval 2.0
+```
 3. Salin konfigurasi contoh:
 ```bash
 cp .env.example .env
