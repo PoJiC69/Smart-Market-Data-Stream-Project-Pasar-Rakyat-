@@ -3,10 +3,8 @@ FastAPI application providing:
 
 - /ingest            POST  -> accept MarketDataStream payloads and store/broadcast prices
 - /prices/latest     GET   -> latest price per market (supports filters)
-- /prices/history    GET   -> historical price series for market+commodity
-- /ws/prices         WebSocket -> real-time price updates
-
-Also serves a simple frontend dashboard at /dashboard (static HTML + JS using Chart.js).
+- /prices/history    GET   -> historical price time-series for market+commodity (includes impact metadata)
+- /ws/prices         WebSocket -> real-time price updates (includes impact metadata)
 """
 from __future__ import annotations
 
@@ -20,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from .manager import RealtimeManager
-from .models import IngestPayload, LatestPricesResponse, HistoryResponse, PricePoint
+from .models import IngestPayload
 
 app = FastAPI(title="Market Realtime Dashboard")
 
@@ -40,9 +38,6 @@ manager = RealtimeManager()
 
 @app.get("/", response_class=HTMLResponse)
 async def index() -> HTMLResponse:
-    """
-    Simple redirect or HTML landing that links to dashboard.
-    """
     html = """
     <html>
       <head><meta charset="utf-8"><title>Market Realtime Dashboard</title></head>
@@ -65,6 +60,8 @@ async def ingest(payload: Dict) -> JSONResponse:
     - market_id
     - prices: dict of commodity->price
     - region (optional)
+
+    This endpoint will compute impact metadata for each commodity and broadcast via WebSocket.
     """
     try:
         p = IngestPayload(**payload)
@@ -84,9 +81,7 @@ async def prices_latest(
 ):
     """
     Return latest prices per market. Supports filtering by region, commodity list, or market list.
-
-    Example:
-    GET /prices/latest?commodities=cabai,bawang&region=JAKARTA
+    Each response item includes 'impacts' with per-commodity impact metadata.
     """
     comms = commodities.split(",") if commodities else None
     mks = markets.split(",") if markets else None
@@ -106,17 +101,16 @@ async def prices_history(
     limit: int = Query(200, ge=1, le=2000),
 ):
     """
-    Return historical time-series for a given market and commodity.
-
-    Example:
-    GET /prices/history?market_id=PASAR-001&commodity=cabai&limit=500
+    Return historical time-series for a given market and commodity (includes impact metadata).
     """
     items = manager.get_history(market_id=market_id, commodity=commodity, region=region, limit=limit)
-    # Convert PricePoint models to JSON-friendly dicts
-    out = [p.dict() for p in items]
-    # Convert timestamps to isoformat
-    for o in out:
-        o["timestamp"] = o["timestamp"].isoformat()
+    # Convert timestamps to isoformat for JSON
+    out = []
+    for p in items:
+        cp = p.copy()
+        if isinstance(cp.get("timestamp"), datetime):
+            cp["timestamp"] = cp["timestamp"].isoformat()
+        out.append(cp)
     return JSONResponse(out)
 
 
@@ -134,7 +128,7 @@ async def websocket_prices(websocket: WebSocket):
     {"action":"subscribe","market_id":"PASAR-001","commodities":["cabai","beras"],"region":"JAKARTA"}
 
     Server will send messages:
-    {"type":"price_update","data":[{PricePoint}, ...]}
+    {"type":"price_update","data":[{...}, ...]} where each item contains impact metadata.
     """
     await websocket.accept()
     # parse filters from query params
