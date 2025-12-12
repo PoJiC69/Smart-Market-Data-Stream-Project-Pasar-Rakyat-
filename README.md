@@ -21,3 +21,10 @@ Quick start (development):
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+"""
+CLI Runner for smart_market_stream.
+
+Usage:
+    python main.py --mode mqtt --mock true
+    python main.py --mode http --mock false
+"""
