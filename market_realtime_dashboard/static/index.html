@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Market Realtime Commodity Prices</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .controls { margin-bottom: 12px; }
+    canvas { max-width: 100%; height: 400px; }
+  </style>
+</head>
+<body>
+  <h1>Market Realtime Commodity Prices</h1>
+
+  <div class="controls">
+    <label>Market:
+      <input id="marketInput" placeholder="e.g., PASAR-001" value="PASAR-001" />
+    </label>
+    <label>Commodity:
+      <input id="commodityInput" placeholder="e.g., cabai" value="cabai" />
+    </label>
+    <label>Region:
+      <input id="regionInput" placeholder="e.g., JAKARTA" />
+    </label>
+    <button id="loadHistory">Load History</button>
+    <button id="connectWs">Connect WS</button>
+    <button id="disconnectWs">Disconnect WS</button>
+  </div>
+
+  <canvas id="priceChart"></canvas>
+
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
