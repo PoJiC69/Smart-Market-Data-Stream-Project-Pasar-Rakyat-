@@ -1,320 +1,368 @@
-# Smart Market Platform — National Smart Market Intelligence
+# Smart Market Platform — Platform Intelijen Pasar Nasional  
 Versi: 0.1.0
 
+> "Mengedepankan data pasar rakyat yang tervalidasi, real-time, dan dapat ditindaklanjuti — dari perangkat di lapangan hingga dashboard nasional."
+
 ---
-Ringkasan singkat
------------------
-Smart Market Platform adalah platform intelijen pasar berskala nasional yang dirancang untuk mengumpulkan, memverifikasi, menganalisis, dan memvisualisasikan data harga komoditas dari pasar rakyat di Indonesia. Platform ini dibangun dengan Python 3.11+, FastAPI, WebSocket, dan arsitektur modular / clean architecture, sehingga mudah diperluas dan diintegrasikan dengan komponen produksi seperti TimescaleDB, broker MQTT TLS, sistem antrian, dan layanan AI.
 
-Fitur utama
+Daftar Isi
+- Ringkasan
+- Fitur Utama
+- Arsitektur & Komponen
+- Persiapan & Quickstart (Pengembangan)
+- Konfigurasi (.env)
+- Endpoint & API Referensi
+- Format Payload Contoh
+- Device Client (Python) — Panduan lengkap
+- Mobile Client (Flutter) — iOS & Android + Foreground Background Service
+- Validasi & Anti-Manipulasi
+- Impact Engine & Macro Fusion
+- Forecasting & AI (overview)
+- Early Warning System (EWS) & Alerts
+- Blockchain Integrity
+- Dashboard: Chart & Map (Realtime)
+- Deployment & Produksi (best practices)
+- Monitoring & Logging
+- Testing & QA
+- Roadmap & Pengembangan Selanjutnya
+- Kontribusi
+- Lisensi & Kontak
+- Troubleshooting Singkat
+
+---
+
+Ringkasan
+--------
+Smart Market Platform (SMP) adalah platform modular untuk mengumpulkan, memverifikasi, menganalisis, dan memvisualisasikan data harga komoditas dari pasar rakyat Indonesia. Platform ini mendukung input dari perangkat IoT (HTTP/MQTT), validasi anti-manipulasi, engine perhitungan dampak harga (impact engine) yang terhubung dengan data makroekonomi, forecasting (AI/heuristik), sistem peringatan dini, sentiment analysis, dan opsi ledger blockchain untuk integritas.
+
+Fitur Utama
 -----------
-- Pengumpulan data IoT (sensor suhu, kelembapan, keramaian, harga komoditas) — diperluas dari Smart Market Data Stream.
-- Validasi & Anti-Manipulasi: deteksi outlier (Z-score, IQR), AI anomaly stub, verifikasi multi-sumber, karantina otomatis.
-- Otentikasi & Onboarding perangkat: JWT, registrasi device, QR-code onboarding, role-based access control.
-- Supply Chain Intelligence: monitor stok, analisa rute & estimasi keterlambatan.
-- Impact Engine: pembobotan faktor (cuaca, hama, distribusi, oversupply, musim, permintaan nasional) + integrasi makro-ekonomi.
-- Forecast Engine: endpoint forecasting (naïve/ARIMA/Prophet/LSTM stubs), training utilities.
-- Early Warning System: pemicu alert, mock Telegram/WhatsApp, risk scoring, push via WebSocket.
-- Sentiment Analysis: pengumpulan sosial sederhana + korelasi dampak.
-- Blockchain ledger (opsional): hash-chaining untuk integritas entri harga, endpoint verifikasi.
-- Dashboard: Chart.js real-time, peta (Leaflet) heatmap, WebSocket streaming.
-- Public API untuk developer: `/commodity/price/live`, `/commodity/price/history`, `/forecast`, `/impact`, `/alerts/live`, `/device/register`, `/market/list`.
+- Input data: HTTP ingest, MQTT (TLS), dan device onboarding via QR + JWT
+- Validasi & Anti-Manipulasi: Z-score, IQR, AI-stub, multi-source verification, quarantine
+- Impact Engine: perhitungan impact_score, dominant_factor, faktor dengan bobot
+- Macro fusion: inflasi, harga bahan bakar, nilai tukar, dampak ke score
+- Forecast engine (naïve/ARIMA/Prophet/LSTM stub)
+- Early Warning System (alert push; mock Telegram/WhatsApp)
+- Sentiment analysis sederhana dan korelasi harga
+- Blockchain ledger (hash chaining) untuk bukti integritas
+- Dashboard realtime: Chart.js (impact dots) + Leaflet map (heatmap)
+- Public API untuk developer dan admin
+- Device client Python dan Mobile cross-platform (Flutter) dengan foreground service untuk Android
 
-Struktur proyek (ringkas)
--------------------------
-smart_market_platform/
-- api/
-  - public/          ← router API yang bisa diakses developer
-  - admin/           ← (placeholder untuk admin API)
-- auth/              ← device/user models, JWT utils, registrasi & QR onboarding
-- iot/               ← (tempat integrasi Smart Market Data Stream)
-- validation_engine/ ← deteksi outlier, AI anomaly stub, multi-source verify
-- supply_chain/      ← stock monitoring, route analyzer
-- forecast_engine/   ← forecasting routes & trainer
-- alerts/            ← EWS manager & websocket push
-- sentiment/         ← social sentiment collector & simple NLP
-- macro_data/        ← macro coefficients (inflation, fuel, etc.)
-- impact_engine/     ← fusion impact engine (menggabungkan faktor & makro)
-- blockchain/        ← simple ledger & integrity check
-- dashboard/
-  - map/             ← peta (Leaflet) & heatmap static assets
-  - charts/          ← chart manager mock
-- main.py            ← FastAPI entrypoint
-- config.py          ← pengambilan env / settings
-- db.py              ← inisialisasi DB (SQLModel/Async)
-- requirements.txt
-- .env.example
-- Dockerfile
-- sample_data_generator.py
-
-Instalasi & Quick Start (pengembangan)
---------------------------------------
-1. Clone repo:
-   ```bash
-   git clone <repo-url>
-   cd smart_market_platform
-   ```
-
-2. Buat virtual environment dan instal dependensi:
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate          # Linux / macOS
-   .venv\Scripts\activate             # Windows PowerShell
-   pip install --upgrade pip
-   pip install -r requirements.txt
-   ```
-
-3. Salin contoh file konfigurasi:
-   ```bash
-   cp .env.example .env
-   # Edit .env sesuai kebutuhan (DATABASE_URL, JWT_SECRET, dsb.)
-   ```
-
-4. Inisialisasi database (pada startup, sistem akan menjalankan `init_db()` otomatis).
-   Secara lokal default menggunakan SQLite (untuk pengembangan). Untuk produksi gunakan PostgreSQL/TimescaleDB:
-   ```
-   DATABASE_URL=postgresql+asyncpg://user:password@db:5432/smart_market
-   ```
-
-5. Jalankan aplikasi:
-   ```bash
-   uvicorn smart_market_platform.main:app --reload --host 0.0.0.0 --port 8000
-   ```
-
-6. Akses dokumentasi interaktif:
-   - Swagger UI: http://localhost:8000/docs
-   - ReDoc: http://localhost:8000/redoc
-   - Dashboard (peta): http://localhost:8000/dashboard/map/
-   - Dashboard chart (static Chart.js): http://localhost:8000/market_realtime_dashboard/static/index.html (jika modul dipasang)
-
-Konfigurasi environment
------------------------
-Lihat `.env.example`. Parameter penting:
-- DATABASE_URL — koneksi async ke DB (sqlite/asyncpg)
-- JWT_SECRET, JWT_ALGORITHM — untuk menandatangani token perangkat
-- MQTT_TLS_CERT / MQTT_TLS_KEY — path sertifikat ketika TLS MQTT digunakan
-- ALERT_THRESHOLD — ambang untuk EWS
-- TELEGRAM_TOKEN / WHATSAPP_TOKEN — token integrasi (mock jika kosong)
-
-API publik (ringkasan)
+Arsitektur & Komponen
 ---------------------
-Semua endpoint public berada di prefix `/api/public`. Contoh penting:
+Komponen utama:
+- Backend FastAPI (modular):
+  - smart_market_platform.main (entry point)
+  - api/public, auth, validation_engine, supply_chain, forecast_engine, alerts, sentiment, macro_data, impact_engine, blockchain, dashboard/map
+- Database: SQLModel (SQLite in dev), direkomendasikan PostgreSQL + TimescaleDB untuk produksi
+- Device client:
+  - Python async client (HTTP/MQTT) — local queue (SQLite), token management
+  - Flutter mobile client (iOS/Android) — secure token, WebSocket, foreground service (Android)
+- Frontend:
+  - Static Chart.js dashboard (impact dots & tooltips)
+  - Leaflet map heatmap
+- Optional: MQTT broker (TLS), Redis/NATS for pub/sub, object storage untuk model artifacts
 
-1. Commodity & price
-- GET /api/public/commodity/price/live?commodity={commodity}&region={region}
-  - Latest price per pasar untuk komoditas
-- GET /api/public/commodity/price/history?commodity={}&market_id={}&limit={}
+Persiapan & Quickstart (Pengembangan)
+------------------------------------
+Prerequisites:
+- Python 3.11+
+- Node/Flutter toolchain (jika menggunakan Mobile client)
+- PostgreSQL (opsional, disarankan untuk produksi)
+- MQTT broker (opsional; mosquitto)
 
-2. Forecast
-- GET /api/public/forecast?commodity={commodity}
-  - Kembalikan forecast 7 hari dan confidence
+1. Clone repository:
+```bash
+git clone <repo-url>
+cd smart_market_platform
+```
 
-3. Impact
-- GET /api/public/impact?commodity={}&market_id={}&prev_price={}&new_price={}
-  - Menghasilkan impact_score, dominant_factor, factor weights (menggunakan Macro fusion)
+2. Virtual environment & instal dependensi backend:
+```bash
+python -m venv .venv
+source .venv/bin/activate        # Linux/macOS
+.venv\Scripts\activate           # Windows
+pip install --upgrade pip
+pip install -r requirements.txt
+```
 
-4. Alerts
-- GET /api/public/alerts/live
-  - Ambil alert terbaru
+3. Salin konfigurasi contoh:
+```bash
+cp .env.example .env
+```
+Edit `.env` sesuai kebutuhan (DATABASE_URL, JWT_SECRET, dsb).
 
-5. Device & market listing
-- GET /api/public/market/list
+4. Jalankan backend (development):
+```bash
+uvicorn smart_market_platform.main:app --reload --host 0.0.0.0 --port 8000
+```
 
-API internal & fungsionalitas lain
----------------------------------
-- Auth:
-  - POST /api/auth/device/register  → registrasi device; mengembalikan token JWT & data-URL QR (PNG)
-  - POST /api/auth/token            → dapatkan token untuk device terdaftar
+5. Jalankan device client Python (opsional) untuk simulasi:
+```bash
+cd device_client
+python main.py --mode http --device-id DEV-001 --market-id PASAR-001 --mock true --interval 2.0
+```
 
-- Validation:
-  - POST /api/validation/price/check
-    - Payload: {market_id, commodity, price, region?}
-    - Respon: flags (zscore, iqr, ai, multi_source_ok), quarantined bool, sources mock
-    - Jika dicurigai, entry akan dikarantina; otherwise ditambahkan ke window statistik
+6. Jalankan Flutter mobile app (opsional):
+- Atur `baseUrl` di `lib/services/api_service.dart` (10.0.2.2 untuk Android emulator).
+```bash
+cd flutter_client
+flutter pub get
+flutter run
+```
 
-- Forecast engine:
-  - GET /api/forecast/{commodity}  → forecast 7 hari (naïve model saat ini)
-  - GET /api/forecast/confidence?commodity={}
-
-- Supply chain:
-  - GET /api/supply/stock/{entity_id}
-  - GET /api/supply/route/analyze?route_id={}&distance_km={}
-
-- Alerts:
-  - POST /api/alerts/trigger  → memicu alert secara manual
-  - WS  /api/alerts/ws         → subscribe alerts via WebSocket
-
-- Blockchain:
-  - POST /api/blockchain/append → tambahkan entri ke simple ledger
-  - GET  /api/blockchain/integrity/check → verifikasi rantai hash
-
-WebSocket endpoints (real-time)
--------------------------------
-- /ws/prices         → (market_realtime_dashboard) streaming price_update yang menyertakan metadata impact
-- /api/alerts/ws     → push alert real-time ke subscriber
-
-Frontend dashboard
+Konfigurasi (.env)
 ------------------
-- Charting dashboard (Chart.js) menampilkan time-series harga dan "impact dots" ber-color-code.
-  - Tooltip menunjukkan impact_score, dominant_factor, dan top factors_with_weights.
-- Map dashboard (Leaflet) untuk heatmap harga per pasar.
-- Frontend static assets ditempatkan di:
-  - `market_realtime_dashboard/static/`
-  - `smart_market_platform/dashboard/map/static/`
+Contoh parameter penting (lihat `.env.example`):
+```
+APP_NAME=Smart Market Platform
+ENV=development
+DEBUG=true
+DATABASE_URL=sqlite+aiosqlite:///./sm_platform.db
+JWT_SECRET=replace_with_strong_secret
+JWT_ALGORITHM=HS256
+MQTT_BROKER=localhost
+MQTT_PORT=1883
+MQTT_TOPIC=pasar/data
+MQTT_TLS_CERT=./certs/mqtt_cert.pem
+MQTT_TLS_KEY=./certs/mqtt_key.pem
+ALERT_THRESHOLD=0.6
+TELEGRAM_TOKEN=...
+WHATSAPP_TOKEN=...
+```
 
-Architektur data & integritas
-----------------------------
-- Data harga masuk saat POST /ingest (atau via streamer eksternal).
-- Sebelum diterima, data melewati Validation Engine (Z-score, IQR, AI stub, multi-source verify).
-- Entry yang dicurigai akan dikarantina dan ditandai; operator/admin dapat mereview.
-- Pilihan: setiap entri disimpan pada ledger blockchain sederhana (hash-chaining) untuk integritas audit trail.
-- History time-series dapat disimpan di TimescaleDB / InfluxDB untuk produksi.
+Endpoint & API Referensi (Ringkasan)
+-----------------------------------
+- Auth
+  - POST /api/auth/device/register — registrasi device (market_id, device_id, role) → token + qr
+  - POST /api/auth/token — mendapatkan token untuk device terdaftar
+- Validation
+  - POST /api/validation/price/check — periksa apakah harga outlier/ditandai/quarantine
+- Ingest
+  - POST /ingest — endpoint utama untuk ingest payload MarketDataStream
+- Realtime & Dashboard
+  - WebSocket /ws/prices — stream price_update (termasuk impact metadata)
+  - GET /dashboard/map/ — peta heatmap
+- Forecast
+  - GET /api/forecast/{commodity}
+  - GET /api/forecast/confidence?commodity=
+- Public API (developer)
+  - GET /api/public/commodity/price/live?commodity=
+  - GET /api/public/commodity/price/history?commodity=&market_id=
+  - GET /api/public/impact?commodity=&market_id=&prev_price=&new_price=
+  - GET /api/public/alerts/live
+- Blockchain
+  - POST /api/blockchain/append
+  - GET /api/blockchain/integrity/check
+- Alerts WS
+  - WebSocket /api/alerts/ws
+
+Format Payload — Contoh
+-----------------------
+Payload yang dikirim device (misalnya ke /ingest):
+```json
+{
+  "timestamp": "2025-12-12T12:34:56.789Z",
+  "market_id": "PASAR-001",
+  "device_id": "DEV-001",
+  "region": "JAKARTA",
+  "temperature": 29.5,
+  "humidity": 72.3,
+  "crowd": 12,
+  "prices": {
+    "cabai": 15000,
+    "bawang": 9000,
+    "beras": 12000
+  }
+}
+```
+
+Contoh curl
+```bash
+# Registrasi device
+curl -X POST "http://localhost:8000/api/auth/device/register" \
+ -H "Content-Type: application/json" \
+ -d '{"market_id":"PASAR-001","device_id":"DEV-001","role":"operator"}'
+
+# Mengirim data
+curl -X POST "http://localhost:8000/ingest" \
+ -H "Content-Type: application/json" \
+ -H "Authorization: Bearer <TOKEN>" \
+ -d @payload.json
+```
+
+Device Client (Python) — Panduan Lengkap
+---------------------------------------
+Fitur client Python:
+- Async (asyncio + aiohttp)
+- Mode: HTTP / MQTT (paho-mqtt)
+- Registrasi device & simpan token lokal (~/.smart_market_client/token.json)
+- Queue lokal (SQLite) saat offline
+- Flush queue worker dan retry interval
+- Mock sensors built-in
+
+Contoh menjalankan:
+```bash
+cd device_client
+python main.py --register --server http://localhost:8000 --device-id DEV-001 --market-id PASAR-001
+python main.py --mode http --device-id DEV-001 --market-id PASAR-001 --mock true --interval 2.0
+```
+
+Tips:
+- Gunakan token JWT sebagai Authorization header untuk HTTP. Untuk MQTT, token dapat digunakan sebagai password atau gunakan mutual TLS (direkomendasikan).
+- Queue local: file `~/.smart_market_client/queue.db` (SQLite). Periksa jika payload gagal.
+
+Mobile Client (Flutter) — iOS & Android
+---------------------------------------
+Fitur mobile client:
+- Register device & simpan token dengan `flutter_secure_storage`
+- QR-code scan onboarding
+- Send simulated sensor payloads periodically (HTTP/MQTT)
+- WebSocket subscriber (realtime)
+- Dashboard Chart (fl_chart) menampilkan impact dots
+- Background/Foreground service (Android) untuk pengiriman terus menerus
+
+Foreground / Background Service (Android)
+- Implementasi menggunakan package `flutter_foreground_task`.
+- Menjalankan handler `SendTaskHandler` pada isolate terpisah yang melakukan POST ke `/ingest` setiap interval (contoh 5s).
+- Diperlukan permission di `AndroidManifest.xml`:
+  - INTERNET, FOREGROUND_SERVICE, WAKE_LOCK, RECEIVE_BOOT_COMPLETED
+- iOS: tidak ada support untuk long-running foreground service sama persis — gunakan Background Fetch, Push/VoIP, atau native background modes.
+
+Cara pakai background service (Android):
+1. Pastikan `flutter_foreground_task` ditambahkan di `pubspec.yaml`.
+2. Merge perubahan `AndroidManifest.xml` sesuai instruksi.
+3. Di aplikasi tekan "Start Background Service" — service akan berjalan di background meskipun aplikasi tidak aktif (subject to OEM battery optimizations).
+
+Validasi & Anti-Manipulasi (Detail)
+----------------------------------
+- Z-Score (threshold default 3.0) — outlier statistik
+- IQR (multiplier 1.5) — outlier berdasarkan quantiles
+- AI Anomaly Detector (stub) — placeholder LSTM/Prophet; saat ini rule-based
+- Multi-Source Verification — perbandingan mock terhadap sumber lain (central_db, partner_feed)
+- Quarantine logic:
+  - Jika >= 2 detector menandai OR multi-source mismatch → data dikarantina (quarantined=true)
+  - Respon JSON berisi flags, sumber, dan status quarantined
 
 Impact Engine & Macro Fusion
 ----------------------------
-- Impact engine menghitung price_change relatif, faktor-faktor yang berkontribusi, impact_score (0-100) dan dominant_factor.
-- Macro data (inflation, fuel_coefficient, fertilizer_trend) memodifikasi score akhir.
-- Output JSON menyertakan:
-  - price_change
-  - impact_score
-  - dominant_factor
-  - factors_with_weights (map faktor->persentase)
-
-Validasi & Anti-Manipulasi (detil)
----------------------------------
-- Outlier detection:
-  - Z-Score dengan threshold (default 3.0)
-  - IQR dengan multiplier (default 1.5)
-- AI anomaly detector:
-  - Stub/placeholder: relatif deviasi terhadap rolling median (layanan LSTM/Prophet dapat diganti/ditambahkan)
-- Multi-source verification:
-  - Mock feed (central_db, news_scrape, partner_feed) — produksi harus integrasikan real feed dan partner
-- Quarantine logic:
-  - Jika >= 2 validator menandai (mis. zscore & ai) atau multi-source mismatch → quarantined = true
-
-Device onboarding & security
----------------------------
-- Registrasi device menyimpan record pada DB (SQLModel)
-- Token JWT dikeluarkan untuk device (sub = device_id, role)
-- QR onboarding: response registrasi menyertakan data-url PNG QR berisi payload onboarding
-- Role based access control: role sederhana (admin/operator/central), gunakan dependency injection FastAPI utk memeriksa role sebelum akses admin
-- MQTT TLS: konfigurasi sertifikat dipersiapkan (MQTT_TLS_CERT/MQTT_TLS_KEY) — implementasi broker dan klien TLS harus dikonfigurasi selain platform ini
+- Menghitung `price_change` (relatif), `impact_score` (0-100), `dominant_factor`, dan `factors_with_weights`.
+- Faktor default: weather, pests, distribution, logistics, oversupply, seasonal_harvest, national_demand.
+- Macro fusion (inflation, fuel, currency) menyesuaikan `impact_score`.
+- Output ditambahkan ke payload yang disimpan & dikirim via WebSocket.
 
 Forecasting & AI
 ----------------
-- Module menyediakan:
-  - route sederhana mengembalikan forecast 7 hari (naïve trend / ARIMA/Prophet/LSTM placeholders)
-  - trainer utilities untuk menyimpan artifact sederhana
-- Rekomendasi: gunakan Prophet atau pelatihan LSTM (TensorFlow/PyTorch) pada dataset historis (TimescaleDB) untuk akurasi produksi
+- Module forecasting menyediakan endpoint sederhana:
+  - Naïve linear trend (default dev)
+  - Placeholder untuk Prophet, ARIMA (statsmodels), dan LSTM (TensorFlow/PyTorch)
+- Endpoint:
+  - GET /api/forecast/{commodity} → forecast_7d + confidence
+- Training utilities sederhana tersedia (`forecast_engine/trainer.py`) — untuk produksi, gunakan dataset historis di TimescaleDB dan jalankan training di environment terpisah (GPU).
 
-Early Warning System (EWS)
---------------------------
-- AlertsManager memonitor event (default: worker periodik).
-- Memicu alert berdasarkan ambang (ALERT_THRESHOLD) dan rule yang Anda definisikan.
-- Integrasi mock ke Telegram/WhatsApp; tambahkan token & implementasi produksi jika perlu.
-
-Sentiment Analysis
-------------------
-- Simple sentiment analyzer: rule-based vocabulary bahasa Indonesia
-- Mock social-data collector yang menghasilkan sample teks untuk korelasi dampak terhadap harga
-
-Supply Chain Intelligence
--------------------------
-- Route analyzer heuristik yang mengkombinasikan weather/traffic/disaster simulasi → estimasi delay
-- Stock monitoring endpoint sederhana (warehouse/distributor/farmer)
+Early Warning System (EWS) & Alerts
+-----------------------------------
+- AlertsManager: push alert, simpan recent alerts, broadcast via WebSocket, mock-send ke Telegram/WhatsApp
+- Thresholds configurable via `.env` (ALERT_THRESHOLD)
+- Endpoint:
+  - POST /api/alerts/trigger
+  - WebSocket /api/alerts/ws
 
 Blockchain Integrity
 --------------------
-- Simple in-memory blockchain ledger:
-  - append entry (POST /api/blockchain/append)
-  - verify integrity (GET /api/blockchain/integrity/check)
-- Untuk produksi pertimbangkan Hyperledger / managed ledger.
+- Simple in-memory blockchain ledger (hash chaining) untuk mencatat entri harga sebagai bukti integritas.
+- Endpoints:
+  - POST /api/blockchain/append — menambah block
+  - GET /api/blockchain/integrity/check — verifikasi chain
+- Produksi: pertimbangkan Hyperledger / managed ledger untuk audit dan immutability.
 
-Integrasi dengan Smart Market Data Stream
-----------------------------------------
-- Arahkan streamer ke endpoint ingest/validation:
-  - Set HTTP_ENDPOINT di `.env` ke: `http://<platform-host>:8000/ingest` (atau gunakan /api/validation/price/check)
-- Setelah menerima payload, platform akan:
-  - Validasi data
-  - Hitung impact & macrodatas
-  - Simpan/stream ke WebSocket
-  - Kirim alert jika perlu
-  - Simpan ke history & ledger (opsional)
+Dashboard: Chart & Map (Realtime)
+--------------------------------
+- Chart.js frontend: line chart + color-coded impact dots; tooltip menampilkan impact_score, dominant_factor, top factor weights.
+- Map (Leaflet): heatmap layer untuk harga intensitas; update realtime via WebSocket.
+- Frontend static assets tersedia di `market_realtime_dashboard/static` & `smart_market_platform/dashboard/map/static`.
 
-Contoh penggunaan (curl)
-------------------------
-- Validasi harga:
-  ```bash
-  curl -X POST "http://localhost:8000/api/validation/price/check" \
-    -H "Content-Type: application/json" \
-    -d '{"market_id":"PASAR-001","commodity":"cabai","price":15000}'
-  ```
+Deployment & Produksi (Best Practices)
+-------------------------------------
+Rekomendasi arsitektur produksi:
+- Backend: containerized FastAPI (uvicorn/gunicorn) + NGINX reverse proxy + TLS
+- DB: PostgreSQL + TimescaleDB untuk time-series data
+- Message broker: MQTT (mosquitto/emqx/vernemq) dengan TLS & mutual-auth; Redis/NATS/Kafka untuk pub/sub & scaling WebSocket
+- Model serving: dedicated model server (TF Serving, TorchServe) atau batch jobs
+- Secrets: simpan JWT secret, broker certs di secret manager (Vault/Kubernetes secrets)
+- Logging & Observability: centralized logging (ELK/Opensearch), metrics (Prometheus + Grafana)
+- Orchestration: Kubernetes + HPA, StatefulSets untuk TSDB
+- CI/CD: lint/test/build pipelines, container image scanning
 
-- Register device:
-  ```bash
-  curl -X POST "http://localhost:8000/api/auth/device/register" \
-    -H "Content-Type: application/json" \
-    -d '{"market_id":"PASAR-001","device_id":"DEV-123","role":"operator"}'
-  ```
+Contoh Docker (dev)
+- Terdapat Dockerfile sederhana di repo; sesuaikan untuk production dengan multi-stage builds dan non-root user.
 
-- Append ledger:
-  ```bash
-  curl -X POST "http://localhost:8000/api/blockchain/append" -H "Content-Type: application/json" \
-    -d '{"market_id":"PASAR-001","commodity":"cabai","price":15000}'
-  ```
+Monitoring & Logging
+--------------------
+- Logging menggunakan Python logging + rotating file handler (configurable).
+- Telemetry: tambahkan metrics endpoints dan instrumentasi Prometheus.
+- Alerting: integrasi dengan EWS & external notification channels (Telegram, WhatsApp, SMS).
 
-- Forecast:
-  ```bash
-  curl "http://localhost:8000/api/forecast/cabai"
-  ```
+Testing & QA
+-----------
+- Unit tests untuk components: validation_engine, impact_engine, auth
+- Integration tests: simulate device posts, check validation->impact->alert flow
+- Use test DB (SQLite in-memory) for CI
+- Implement contract tests for public API
 
-Deployment & Docker
--------------------
-Terdapat Dockerfile (development). Untuk production:
-- Gunakan image yang memadai dan build dengan requirements terpasang.
-- Gunakan PostgreSQL/TimescaleDB (DATABASE_URL ke asyncpg).
-- Siapkan broker MQTT TLS (mosquitto/dedicated) dan konfigurasi sertifikat.
-- Gunakan proses worker (Celery/Async background tasks) untuk training model & alerting skala besar.
-- Gunakan reverse proxy (NGINX) dan TLS untuk endpoint HTTP.
+Roadmap & Pengembangan Selanjutnya
+----------------------------------
+Prioritas jangka pendek:
+- Integrasi TimescaleDB / InfluxDB untuk storage
+- Ganti AI anomaly stub dengan LSTM/Prophet terlatih
+- Replace in-memory WebSocket broker with Redis pub/sub for scale-out
+- Add RBAC enforcement & audit logging
 
-Skalabilitas & Arsitektur Produksi
----------------------------------
-- Pub/Sub real-time: gunakan Redis/NGINX + websocket broker (uvicorn + gunicorn dengan workers) atau dedicated pub/sub seperti NATS.
-- Multi-instance: simpan state (history & ledger) di database/timeseries agar worker terdistribusi.
-- Model training: jalankan di cluster terpisah (GPU) dan tarik model artifact via object storage.
-- Keamanan: aktifkan RBAC, audit logging, rate limiting, TLS di semua layanan, validasi payload ketat.
-
-Testing
--------
-- Unit tests untuk komponen kritis (validation_engine, impact_engine, auth).
-- Integration tests: runner yang men-simulasikan device posting dan mengecek aliran (validation → impact → alert).
-- Gunakan test DB (SQLite in-memory) untuk CI.
-
-Pengembangan lanjutan (roadmap singkat)
---------------------------------------
-- Gantikan AI stub anomaly detector dengan model LSTM atau Prophet yang dilatih.
-- Integrasi TimescaleDB/InfluxDB untuk historical retention & queries.
-- Integrasi Pub/Sub (Redis/ Kafka) untuk scale out WebSocket broadcast.
-- Implementasi role-based access & policy enforcement untuk endpoint admin/operator.
-- Integrasi nyata ke Telegram/WhatsApp (via Bot API / official business API).
-- Dashboard profesional (auth, multiple charts, user management).
-- Docker Compose / Kubernetes manifests + Helm chart.
+Prioritas jangka menengah:
+- Production-grade MQTT + certificate management
+- Persistent queue & encryption at rest for device clients
+- Mobile app improvements: background encrypted queue, OTA firmware update
+- Docker Compose / Kubernetes manifests & Helm charts
 
 Kontribusi
 ----------
-Silakan buka issue & pull request. Ikuti pedoman:
+Semua kontribusi dipersilakan melalui Pull Request:
 - Gunakan Python 3.11+
-- Sertakan test & dokumentasi perubahan
-- Format kode: black/isort/ruff
+- Sertakan unit tests untuk fitur baru
+- Format code: black / isort / ruff
+- Ikuti model branching git-flow
 
 Lisensi
 -------
-MIT License — lihat file LICENSE untuk detail.
+MIT License — lihat file LICENSE.
 
 Kontak & Dukungan
 -----------------
-Jika perlu bantuan pengaturan atau integrasi, Anda dapat menambahkan issue di repository atau menghubungi tim pengembang yang mengelola solution ini.
+Untuk dukungan, integrasi, atau pengembangan fitur berbayar:
+- Buka Issue di repository
+- Atau hubungi tim maintainers (tambahkan detail kontak internal di sini jika diperlukan)
+
+Troubleshooting Singkat
+-----------------------
+- Server tidak merespon:
+  - Pastikan uvicorn berjalan: `uvicorn smart_market_platform.main:app --reload`
+  - Periksa `DATABASE_URL` dan konektivitas DB
+- Device client enqueued items:
+  - Periksa `~/.smart_market_client/queue.db` (sqlite)
+  - Pastikan token valid dan server reachable
+- WebSocket tidak menerima update:
+  - Pastikan WS endpoint path benar (`/ws/prices`) dan klien menyertakan query params yang sesuai
+- Mobile background service tidak jalan di Android:
+  - Periksa permission (FOREGROUND_SERVICE, WAKE_LOCK)
+  - Periksa baterai optimization/Doze — tambahkan pengecualian pada device testing
 
 ---
 
-Dokumentasi lebih lanjut, diagram arsitektur, dan contoh integrasi dapat disediakan sesuai permintaan (diagram deployment, ERD DB, sequence diagram aliran data).
+Terima kasih telah menggunakan Smart Market Platform.  
+Jika Anda ingin, saya bisa:
+- Menyediakan diagram sequence/data flow (SVG/Markdown)
+- Menghasilkan contoh Docker Compose untuk stack (backend + Postgres + MQTT + Redis)
+- Menyusun playbook migrasi ke TimescaleDB dan integrasi model LSTM lengkap
+
+Silakan beri tahu langkah mana yang ingin Anda prioritaskan.
