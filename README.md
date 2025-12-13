@@ -104,8 +104,7 @@ uvicorn smart_market_platform.main:app --reload --host 0.0.0.0 --port 8000
 
 5. Jalankan device client Python (opsional) untuk simulasi:
 ```bash
-cd device_client
-python main.py --mode http --device-id DEV-001 --market-id PASAR-001 --mock true --interval 2.0
+python -m device_client.main --mode http --device-id DEV-001 --market-id PASAR-001 --mock true --interval 2.0
 ```
 
 6. Jalankan Flutter mobile app (opsional):
