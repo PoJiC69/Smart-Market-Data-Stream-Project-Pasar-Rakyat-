@@ -17,6 +17,7 @@ class Settings:
     APP_NAME: str = os.getenv("APP_NAME", "Smart Market Platform")
     ENV: str = os.getenv("ENV", "development")
     DEBUG: bool = os.getenv("DEBUG", "true").lower() in ("1", "true", "yes")
+    # Default database URL unchanged
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./sm_platform.db")
     JWT_SECRET: str = os.getenv("JWT_SECRET", "changeme")
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
@@ -25,5 +26,9 @@ class Settings:
     ALERT_THRESHOLD: float = float(os.getenv("ALERT_THRESHOLD", "0.6"))  # impact score threshold 0..1
     TELEGRAM_TOKEN: Optional[str] = os.getenv("TELEGRAM_TOKEN")
     WHATSAPP_TOKEN: Optional[str] = os.getenv("WHATSAPP_TOKEN")
+
+    # NEW: host/port defaults (used by programmatic runner)
+    HOST: str = os.getenv("HOST", "0.0.0.0")
+    PORT: int = int(os.getenv("PORT", "6969"))
 
 settings = Settings()

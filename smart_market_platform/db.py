@@ -1,29 +1,36 @@
-"""
-Database initialization and session helpers using SQLModel.
-"""
 from __future__ import annotations
 
-from sqlmodel import SQLModel, create_engine
-from sqlmodel.ext.asyncio.session import AsyncSession, create_async_engine
-from sqlalchemy.ext.asyncio import AsyncEngine
-import asyncio
+import os
+from typing import AsyncGenerator
 
-from .config import settings
+from sqlmodel import SQLModel
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
-_async_engine: AsyncEngine = create_async_engine(settings.DATABASE_URL, echo=settings.DEBUG, future=True)
+# Load DATABASE_URL from environment (fallback to sqlite async file DB)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./sm_platform.db")
 
-async def init_db():
-    # create tables
-    async with _async_engine.begin() as conn:
+# Create async engine and session factory
+engine = create_async_engine(DATABASE_URL, echo=False, future=True)
+async_session_factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+async def init_db() -> None:
+    """
+    Initialise database schema (create tables).
+    Call this at startup (e.g. in FastAPI startup event).
+    """
+    async with engine.begin() as conn:
+        # Run the SQLModel metadata.create_all() in the sync context of the async engine
         await conn.run_sync(SQLModel.metadata.create_all)
 
-def get_engine():
-    return _async_engine
 
-# Provide async session factory
-from sqlalchemy.orm import sessionmaker
-async_session = sessionmaker(_async_engine, class_=AsyncSession, expire_on_commit=False)
-
-async def get_session() -> AsyncSession:
-    async with async_session() as session:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Async generator dependency for FastAPI routes.
+    Usage:
+        async def endpoint(session: AsyncSession = Depends(get_session)):
+            ...
+    """
+    async with async_session_factory() as session:
         yield session
