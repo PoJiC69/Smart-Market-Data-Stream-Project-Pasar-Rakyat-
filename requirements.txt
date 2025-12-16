@@ -1,3 +1,36 @@
-aiohttp>=3.8
-paho-mqtt>=1.6
-python-dotenv>=0.21
+# Core runtime
+fastapi
+uvicorn[standard]
+
+# ORM / async DB
+sqlmodel
+sqlalchemy
+aiosqlite            # async sqlite driver for sqlite+aiosqlite
+# asyncpg             # uncomment if using postgresql+asyncpg in production
+
+# HTTP clients & utilities
+httpx                # async HTTP client (used by clients)
+requests             # sync HTTP utilities (if used in scripts)
+python-dotenv        # load .env files
+
+# Messaging / MQTT (optional for device client)
+paho-mqtt            # if MQTT transport is used by device_client
+
+# Websockets (if used)
+websockets
+
+# Development / tooling (recommended)
+alembic              # DB migrations (optional)
+pytest               # testing
+black                # formatting
+isort                # import sorting
+mypy                 # optional type checking
+
+# Extras: add these for production monitoring / tracing (optional)
+# prometheus-client
+# sentry-sdk
+
+# Notes:
+# - Uncomment asyncpg in case you want to use PostgreSQL / Timescale: `pip install asyncpg`
+# - Pin versions if you have strict reproducibility needs (e.g., fastapi==0.95.2)
+# - After editing this file, run: pip install -r requirements.txt
