@@ -20,7 +20,8 @@ else:
 
 @dataclass
 class Settings:
-    PLATFORM_HTTP_BASE: str = os.getenv("PLATFORM_HTTP_BASE", "http://localhost:8000")
+    # If PLATFORM_HTTP_BASE provided in env it will be used; otherwise default to localhost:6969
+    PLATFORM_HTTP_BASE: str = os.getenv("PLATFORM_HTTP_BASE", "http://localhost:6969")
     REGISTER_PATH: str = os.getenv("REGISTER_PATH", "/api/auth/device/register")
     INGEST_PATH: str = os.getenv("INGEST_PATH", "/ingest")
     VALIDATION_PATH: str = os.getenv("VALIDATION_PATH", "/api/validation/price/check")
