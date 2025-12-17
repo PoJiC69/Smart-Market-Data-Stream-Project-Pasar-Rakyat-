@@ -247,3 +247,4 @@ Terima kasih — jika Anda mau, saya bisa:
 - Membuat patch git (diff) yang mengubah semua hard-coded port 8000 -> 6969
 - Menambahkan Alembic skeleton & contoh migration
 - Membuat docker-compose.yml contoh (Postgres + Redis + app)
+<img width="1366" height="768" alt="Screenshot_2025-12-17_21_57_32" src="https://github.com/user-attachments/assets/56ea8496-bb33-4461-8759-08546c9c963c" />
