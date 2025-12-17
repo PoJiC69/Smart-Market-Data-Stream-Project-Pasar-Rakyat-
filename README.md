@@ -369,3 +369,6 @@ Jika Anda ingin, saya bisa:
 - Menyusun playbook migrasi ke TimescaleDB dan integrasi model LSTM lengkap
 
 Silakan beri tahu langkah mana yang ingin Anda prioritaskan.
+
+<img width="1366" height="768" alt="Screenshot_2025-12-17_21_52_13" src="https://github.com/user-attachments/assets/9e9c54df-db12-47b5-a35e-faf6a14f013e" />
+
